@@ -72,6 +72,7 @@ logger:
 
 ## Future Enhancements
 
+- Refactoring API calls into a PyPI library to fit HA guidelines
 - Implementing more error handling and feedback when API requests fail.
 - HACS integration and graphical setup screen
 - Discovery of MHUB devices on network with auto-configure
