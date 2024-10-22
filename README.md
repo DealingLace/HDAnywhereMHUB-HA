@@ -1,6 +1,6 @@
 # HDAnywhere MHUB Home Assistant Integration
 
-This custom Home Assistant integration provides support for controlling HDAnywhere MHUB devices as media players. With this integration, you can control the power, switch inputs, and monitor the state of your MHUB's video output ports from within Home Assistant.
+This custom Home Assistant integration provides support for controlling HDAnywhere MHUB devices as media players. With this integration, you can monitor and control the power, as well as switch available inputs to available outputs from within Home Assistant.
 
 ## Features
 
