@@ -68,7 +68,7 @@ logger:
 
 - Platform Initialization: On setup, the integration makes an API request to the MHUB device to fetch the list of video input and output ports.
 - Entity Creation: For each output port, a media player entity is created in Home Assistant. Each entity is assigned a unique name and ID based on the MHUB name and the output ID.
-- Media Player Features: Each media player entity supports turning the output on/off and selecting video input sources.
+- Media Player Features: Each media player entity supports turning the matrix on/off and selecting video input sources for each output.
 
 ## Future Enhancements
 
