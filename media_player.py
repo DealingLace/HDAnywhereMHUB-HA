@@ -20,29 +20,72 @@ PLATFORM_SCHEMA = vol.Schema({
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the HDAnywhere MHUB media player platform."""
     ip_address = config.get(CONF_IP_ADDRESS)
-    add_entities([HDAnywhereMHUBMediaPlayer(ip_address)], True)
+    
+    # Fetch system information from the API
+    base_url = f"http://{ip_address}/api/data/100/"
+    try:
+        response = requests.get(base_url)
+        if response.status_code == 200:
+            data = response.json()
 
+            # Extract the MHUB name
+            mhub_name = data["data"]["mhub"]["mhub_name"]
+
+            # Log the data to inspect its structure
+            _LOGGER.debug(f"Received system data: {data}")
+
+            # Check if inputs and outputs exist and are in the correct format
+            io_data = data["data"]["io_data"]
+
+            inputs = io_data["input_video"]  # List of input video sources
+            outputs = io_data["output_video"]  # List of output video ports
+
+            # Create media player entities for each output
+            media_players = []
+            for output in outputs:
+                output_id = output.get("start_label", "Unknown")  # Use start_label as the output ID (e.g., A, B)
+                
+                # Prepare available sources (input labels)
+                available_sources = {}
+                for input_data in inputs:
+                    for label in input_data.get('labels', []):
+                        if label['show']:  # Only include labels that are marked to show
+                            available_sources[label['id']] = label['label']
+
+                # Pass both inputs and outputs to the media player
+                media_players.append(HDAnywhereMHUBMediaPlayer(ip_address, output_id, available_sources, mhub_name))
+
+            add_entities(media_players, True)
+        else:
+            _LOGGER.error(f"Failed to retrieve system information: {response.status_code}")
+    except Exception as e:
+        _LOGGER.error(f"Error fetching system information: {e}")
 
 class HDAnywhereMHUBMediaPlayer(MediaPlayerEntity):
     """Representation of a Media Player for HDAnywhere MHUB."""
 
-    def __init__(self, ip_address):
+    def __init__(self, ip_address, output_id, available_inputs, mhub_name):
         """Initialize the media player."""
         self._ip_address = ip_address
+        self._output_id = output_id  # Unique ID for each output, like "A", "B", etc.
         self._state = STATE_OFF
         self._source = None
         self.base_url = f"http://{self._ip_address}/api"
-        self._available_sources = {
-            "1": "Input 1",
-            "2": "Input 2",
-            "3": "Input 3",
-            "4": "Input 4",
-        }
+        self._mhub_name = mhub_name  # Assign the mhub_name passed in the constructor
+        
+        # Store available inputs dynamically
+        self._available_sources = {str(k): f"{v}" for k, v in available_inputs.items()}
 
     @property
     def name(self):
         """Return the name of the media player."""
-        return f"MHUB Media Player {self._ip_address}"
+        return f"{self._mhub_name} {self._output_id}"
+
+    @property
+    def unique_id(self):
+        """Return the unique ID of the media player."""
+        # Combine MHUB name, IP address, and output ID to form a unique identifier
+        return f"{self._mhub_name}_{self._ip_address}_{self._output_id}".replace(" ", "_")
 
     @property
     def state(self):
@@ -70,7 +113,7 @@ class HDAnywhereMHUBMediaPlayer(MediaPlayerEntity):
 
     def turn_on(self):
         """Turn the media player on."""
-        url = f"{self.base_url}/power/1/"  # Turn ON
+        url = f"{self.base_url}/power/1/"
         try:
             response = requests.post(url)
             if response.status_code == 200:
@@ -84,7 +127,7 @@ class HDAnywhereMHUBMediaPlayer(MediaPlayerEntity):
 
     def turn_off(self):
         """Turn the media player off."""
-        url = f"{self.base_url}/power/0/"  # Turn OFF
+        url = f"{self.base_url}/power/0/"
         try:
             response = requests.post(url)
             if response.status_code == 200:
@@ -98,12 +141,13 @@ class HDAnywhereMHUBMediaPlayer(MediaPlayerEntity):
 
     def select_source(self, source):
         """Select the input source."""
-        # Map the source name back to its corresponding input number
+        # Find the input port corresponding to the selected source
         input_port = {v: k for k, v in self._available_sources.items()}.get(source)
-        output_port = "a"  # Assuming you're controlling output A
-
+        
         if input_port:
-            url = f"{self.base_url}/control/switch/{output_port}/{input_port}/"
+            url = f"{self.base_url}/control/switch/{self._output_id.lower()}/{input_port}/"
+            _LOGGER.debug(f"Switching output {self._output_id} to input {input_port} using URL: {url}")
+
             try:
                 response = requests.get(url)
                 if response.status_code == 200:
@@ -111,20 +155,20 @@ class HDAnywhereMHUBMediaPlayer(MediaPlayerEntity):
                     self._source = source
                     self.update()
                 else:
-                    _LOGGER.error(f"Failed to switch input: {response.status_code}")
+                    _LOGGER.error(f"Failed to switch input: {response.status_code}. Response: {response.text}")
             except Exception as e:
                 _LOGGER.error(f"Error switching input: {e}")
         else:
-            _LOGGER.error(f"Invalid source selected: {source}")
+            _LOGGER.error(f"Invalid source selected: {source}. Available sources: {self._available_sources}")
+
 
     def update(self):
         """Fetch the latest state of the media player from the device."""
-        url = f"{self.base_url}/data/0/"  # Get power state
+        url = f"{self.base_url}/data/0/"
         try:
             response = requests.get(url)
             if response.status_code == 200:
                 data = response.json()
-                # Check power status
                 self._state = STATE_ON if data['data']['power'] else STATE_OFF
                 _LOGGER.info(f"Device state updated: {'on' if self._state == STATE_ON else 'off'}")
             else:
