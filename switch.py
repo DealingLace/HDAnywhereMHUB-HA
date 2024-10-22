@@ -6,6 +6,8 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import CONF_IP_ADDRESS
 import homeassistant.helpers.config_validation as cv
 
+# LEGACY OPTION, CONFIGURED UNDER SWITCH DOMAIN
+
 _LOGGER = logging.getLogger(__name__)
 
 # Define the domain of the component
