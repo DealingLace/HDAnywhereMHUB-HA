@@ -5,10 +5,10 @@ This custom Home Assistant integration provides support for controlling HDAnywhe
 ## Features
 
 - **Control MHUB Outputs**: Each output is represented as a media player entity in Home Assistant.
-- **Power Control**: Turn MHUB on or off from the Home Assistant interface.
+- **Power Control**: Turn MHUB on or off from the media player entity in the Home Assistant dashboard.
 - **Source Selection**: Change the video input source for each output.
 - **State Monitoring**: Monitor the state of the MHUB (on/off).
-- **Unique Entity IDs**: Automatically assigns unique IDs for each MHUB output entity..
+- **Unique Entity IDs**: Automatically assigns unique IDs for each MHUB output entity.
 
 ## Installation
 
@@ -69,6 +69,10 @@ logger:
 - Platform Initialization: On setup, the integration makes an API request to the MHUB device to fetch the list of video input and output ports.
 - Entity Creation: For each output port, a media player entity is created in Home Assistant. Each entity is assigned a unique name and ID based on the MHUB name and the output ID.
 - Media Player Features: Each media player entity supports turning the matrix on/off and selecting video input sources for each output.
+
+## Known Limitations
+
+- When the device is turned on or off, an API call is made to ensure the trigger was performed successfully, however, the MHUB does not immediately report that it is on, like it does when you turn it off. Therefore, since the integration never assumes the state of the device, there is a delay on an "on" request, as it will only report it's true state when available.
 
 ## Future Enhancements
 
