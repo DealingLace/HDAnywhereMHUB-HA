@@ -49,6 +49,8 @@ You can switch between available input sources using the source feature. The ava
 
 Each media player entity is named based on the MHUB device name and the output port (e.g., MHUB U (4x3+1) A, MHUB U (4x3+1) B).
 
+- Note that the device name is not the component name from the manufacturer, rather what was assigned to it during setup (eg., House Coolguys A, House Coolguys B)
+
 ### 4. Unique Entity IDs
 
 The integration automatically assigns a unique entity ID for each output based on the MHUB name, the output ID (like A, B, C), and the IP address. This ensures persistent tracking across Home Assistant restarts.
