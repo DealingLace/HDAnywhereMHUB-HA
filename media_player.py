@@ -29,7 +29,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
             data = response.json()
 
             # Extract the MHUB name
-            mhub_name = data["data"]["mhub"]["mhub_name"]
+            mhub_name = data["data"]["mhub"].get("mhub_official_name", "MHUB")
 
             # Log the data to inspect its structure
             _LOGGER.debug(f"Received system data: {data}")
@@ -43,8 +43,9 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
             # Create media player entities for each output
             media_players = []
             for output in outputs:
-                output_id = output.get("start_label", "Unknown")  # Use start_label as the output ID (e.g., A, B)
-                
+                output_id = output.get("start_id", "Unknown")  # Use start_id instead of start_label for output ID
+                output_label = output.get("labels", [{}])[0].get("label", "Output")  # Get label of the output
+
                 # Prepare available sources (input labels)
                 available_sources = {}
                 for input_data in inputs:
@@ -57,7 +58,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
                             available_sources[label['id']] = label['label']
 
                 # Pass both inputs and outputs to the media player
-                media_players.append(HDAnywhereMHUBMediaPlayer(ip_address, output_id, available_sources, mhub_name))
+                media_players.append(HDAnywhereMHUBMediaPlayer(ip_address, output_id, output_label, available_sources, mhub_name))
 
             add_entities(media_players, True)
         else:
@@ -68,10 +69,11 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 class HDAnywhereMHUBMediaPlayer(MediaPlayerEntity):
     """Representation of a Media Player for HDAnywhere MHUB."""
 
-    def __init__(self, ip_address, output_id, available_inputs, mhub_name):
+    def __init__(self, ip_address, output_id, output_label, available_inputs, mhub_name):
         """Initialize the media player."""
         self._ip_address = ip_address
-        self._output_id = output_id  # Unique ID for each output, like "A", "B", etc.
+        self._output_id = output_id  # Unique ID for each output
+        self._output_label = output_label
         self._state = STATE_OFF
         self._source = None
         self.base_url = f"http://{self._ip_address}/api"
@@ -83,7 +85,7 @@ class HDAnywhereMHUBMediaPlayer(MediaPlayerEntity):
     @property
     def name(self):
         """Return the name of the media player."""
-        return f"{self._mhub_name} {self._output_id}"
+        return f"{self._mhub_name} {self._output_label}"
 
     @property
     def unique_id(self):
@@ -164,7 +166,6 @@ class HDAnywhereMHUBMediaPlayer(MediaPlayerEntity):
                 _LOGGER.error(f"Error switching input: {e}")
         else:
             _LOGGER.error(f"Invalid source selected: {source}. Available sources: {self._available_sources}")
-
 
     def update(self):
         """Fetch the latest state of the media player from the device."""
