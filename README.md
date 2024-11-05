@@ -1,6 +1,6 @@
 # HDAnywhere MHUB Home Assistant Integration
 
-This custom Home Assistant integration provides support for controlling HDAnywhere MHUB devices as media players. With this integration, you can monitor and control the power, as well as switch available inputs to available outputs from within Home Assistant.
+This custom Home Assistant integration provides support for controlling HDAnywhere MHUB devices (API 2.1+) as media players. With this integration, you can monitor and control the power, as well as switch available inputs to available outputs from within Home Assistant.
 
 ## Features
 
@@ -47,9 +47,9 @@ You can switch between available input sources using the source feature. The ava
 
 ### 3. Entity Names
 
-Each media player entity is named based on the MHUB device name and the output port (e.g., MHUB U (4x3+1) A, MHUB U (4x3+1) B).
+Each media player entity is named based on the MHUB device name and the output port.
 
-- Note that the device name is not the component name from the manufacturer, rather what was assigned to it during setup (eg., House Coolguys A, House Coolguys B)
+- Note that the device name is not the component name from the manufacturer, rather what was assigned to it during setup (eg. House CoolGuy A, House CoolGuy B)
 
 ### 4. Unique Entity IDs
 
@@ -87,6 +87,7 @@ logger:
 - Adding passthrough control for IR and CEC for custom codes
 - Cross-integration with SmartIR, for controlling other IR enabled devices via passthrough.
 - Cross-integration with Universal Remote, for controlling source and output devices.
+- Backwards compatibility with API v2.0, for older hardware
 
 ## Troubleshooting
 
