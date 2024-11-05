@@ -90,6 +90,9 @@ logger:
 
 ## Troubleshooting
 
+### First place to start
+   - Ensure the MHUB is compatible with MHUB API v2.1
+
 ### If the media player entities do not show up, ensure that:
    - You have restarted Home Assistant after configuring the integration.
    - The correct IP address is configured in the configuration.yaml file.
