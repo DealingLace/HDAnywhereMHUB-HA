@@ -48,8 +48,12 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
                 # Prepare available sources (input labels)
                 available_sources = {}
                 for input_data in inputs:
+                    # Check if any label contains 'show' attribute
+                    any_show_attribute = any('show' in label for label in input_data.get('labels', []))
+
                     for label in input_data.get('labels', []):
-                        if label['show']:  # Only include labels that are marked to show
+                        # If 'show' attribute is present, use it to filter; otherwise, include all
+                        if not any_show_attribute or label.get('show', True):
                             available_sources[label['id']] = label['label']
 
                 # Pass both inputs and outputs to the media player
