@@ -9,6 +9,7 @@ This custom Home Assistant integration provides support for controlling HDAnywhe
 - **Source Selection**: Change the video input source for each output.
 - **State Monitoring**: Monitor the state of the MHUB (on/off).
 - **Unique Entity IDs**: Automatically assigns unique IDs for each MHUB output entity.
+- For backwards compatibility with API v2.0, please see the api2.0 branch.
 
 ## Installation
 
@@ -87,7 +88,6 @@ logger:
 - Adding passthrough control for IR and CEC for custom codes
 - Cross-integration with SmartIR, for controlling other IR enabled devices via passthrough.
 - Cross-integration with Universal Remote, for controlling source and output devices.
-- Backwards compatibility with API v2.0, for older hardware
 
 ## Troubleshooting
 
