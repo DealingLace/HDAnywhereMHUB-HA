@@ -173,7 +173,7 @@ class HDAnywhereMHUBMediaPlayer(MediaPlayerEntity):
             response = requests.get(url)
             if response.status_code == 200:
                 data = response.json()
-                self._state = STATE_ON if data['data']['power'] else STATE_OFF
+                self._state = STATE_ON if data['data']['Power'] else STATE_OFF
                 _LOGGER.info(f"Device state updated: {'on' if self._state == STATE_ON else 'off'}")
             else:
                 _LOGGER.error(f"Failed to update device state: {response.status_code}")
