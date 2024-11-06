@@ -86,8 +86,6 @@ logger:
 - Control for stacked MHUB Systems
 - Adding IR and CEC control for existing control packs.
 - Adding passthrough control for IR and CEC for custom codes
-- Cross-integration with SmartIR, for controlling other IR enabled devices via passthrough.
-- Cross-integration with Universal Remote, for controlling source and output devices.
 
 ## Troubleshooting
 
