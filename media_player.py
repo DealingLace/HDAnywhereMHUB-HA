@@ -40,25 +40,30 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
             inputs = io_data["input_video"]  # List of input video sources
             outputs = io_data["output_video"]  # List of output video ports
 
-            # Create media player entities for each output
+            # Create media player entities for each individual output port
             media_players = []
             for output in outputs:
-                output_id = output.get("start_id", "Unknown")  # Use start_id instead of start_label for output ID
-                output_label = output.get("labels", [{}])[0].get("label", "Output")  # Get label of the output
+                output_type = output.get("type", "unknown")
+                
+                # Use each label within 'labels' to create separate entities
+                for label in output.get("labels", []):
+                    output_id = label.get("id", "Unknown")
+                    output_label = label.get("label", "Output")
+                    
+                    # Prepare available sources (input labels)
+                    available_sources = {}
+                    for input_data in inputs:
+                        any_show_attribute = any('show' in label for label in input_data.get('labels', []))
+                        for input_label in input_data.get('labels', []):
+                            if not any_show_attribute or input_label.get('show', True):
+                                available_sources[input_label['id']] = input_label['label']
 
-                # Prepare available sources (input labels)
-                available_sources = {}
-                for input_data in inputs:
-                    # Check if any label contains 'show' attribute
-                    any_show_attribute = any('show' in label for label in input_data.get('labels', []))
-
-                    for label in input_data.get('labels', []):
-                        # If 'show' attribute is present, use it to filter; otherwise, include all
-                        if not any_show_attribute or label.get('show', True):
-                            available_sources[label['id']] = label['label']
-
-                # Pass both inputs and outputs to the media player
-                media_players.append(HDAnywhereMHUBMediaPlayer(ip_address, output_id, output_label, available_sources, mhub_name))
+                    # Pass both inputs and outputs to the media player
+                    media_players.append(
+                        HDAnywhereMHUBMediaPlayer(
+                            ip_address, output_id, output_label, available_sources, mhub_name, output_type
+                        )
+                    )
 
             add_entities(media_players, True)
         else:
@@ -69,7 +74,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 class HDAnywhereMHUBMediaPlayer(MediaPlayerEntity):
     """Representation of a Media Player for HDAnywhere MHUB."""
 
-    def __init__(self, ip_address, output_id, output_label, available_inputs, mhub_name):
+    def __init__(self, ip_address, output_id, output_label, available_inputs, mhub_name, output_type):
         """Initialize the media player."""
         self._ip_address = ip_address
         self._output_id = output_id  # Unique ID for each output
@@ -78,6 +83,7 @@ class HDAnywhereMHUBMediaPlayer(MediaPlayerEntity):
         self._source = None
         self.base_url = f"http://{self._ip_address}/api"
         self._mhub_name = mhub_name  # Assign the mhub_name passed in the constructor
+        self._output_type = output_type  # e.g., 'hdmi' or 'hdbaset'
         
         # Store available inputs dynamically
         self._available_sources = {str(k): f"{v}" for k, v in available_inputs.items()}
@@ -85,7 +91,7 @@ class HDAnywhereMHUBMediaPlayer(MediaPlayerEntity):
     @property
     def name(self):
         """Return the name of the media player."""
-        return f"{self._mhub_name} {self._output_label}"
+        return f"{self._mhub_name} {self._output_label} ({self._output_type})"
 
     @property
     def unique_id(self):
@@ -147,7 +153,6 @@ class HDAnywhereMHUBMediaPlayer(MediaPlayerEntity):
 
     def select_source(self, source):
         """Select the input source."""
-        # Find the input port corresponding to the selected source
         input_port = {v: k for k, v in self._available_sources.items()}.get(source)
         
         if input_port:
