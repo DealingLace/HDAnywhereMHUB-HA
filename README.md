@@ -76,12 +76,20 @@ logger:
 ## How It Works
 
 - Platform Initialization: On setup, the integration makes an API request to the MHUB device to fetch the list of video input and output ports.
-- Entity Creation: For each output port, a media player entity is created in Home Assistant. Each entity is assigned a unique name and ID based on the zone names and the output ID.
+- Entity Creation: For each zone created that's assigned to an output port, a media player entity is created in Home Assistant. Each entity is assigned a unique name and ID based on the zone names and the output ID.
 - Media Player Features: Each media player entity supports turning the matrix on/off and selecting available video input sources for each output. Currently, there is no way to remove sources from specific media players, like you can in uControl.
 
 ## Known Limitations
 
 - When the device is turned on or off, an API call is made to ensure the trigger was performed successfully, however, the MHUB does not immediately report that it is on, like it does when you turn it off. Therefore, since the integration never assumes the state of the device, there is a delay on an "on" request, as it will only report it's true state when available.
+- Similarly (distantly), other media player entities will take a little longer to report their states back to HA.
+
+## Making use of the Universal Media Player
+
+- Home Assistant is a very powerful and customizeable tool, thus, there are ways to bypass most limitations found in this integration.
+"A universal media player can combine multiple existing entities in Home Assistant into a single media player entity. This is used to create a single media player entity that can control an entire media center."
+Simply put, you can embedd these media players into your existing endpoint devices (AVR's, Media Players, Consoles, etc) and create a holistically integrated entity.
+- Paired with third party integrations like Universal Remote, as well as SmartIR (For controlling non-smart IR appliances), you can create (in my estimations) a much better, more integrated experience.
 
 ## Future Enhancements
 
