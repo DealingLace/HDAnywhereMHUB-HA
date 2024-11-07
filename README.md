@@ -89,7 +89,7 @@ logger:
 - Home Assistant is a very powerful and customizeable tool, thus, there are ways to bypass most limitations found in this integration.
 "A universal media player can combine multiple existing entities in Home Assistant into a single media player entity. This is used to create a single media player entity that can control an entire media center."
 Simply put, you can embedd these media players into your existing endpoint devices (AVR's, Media Players, Consoles, etc) and create a holistically integrated entity.
-- Paired with third party integrations like Universal Remote, as well as SmartIR (For controlling non-smart IR appliances), you can create (in my estimations) a much better, more integrated experience.
+- Paired with third party integrations like Universal Remote, as well as SmartIR (For controlling non-smart IR appliances), you can create a similar, yet much better, more integrated experience than the one found in uControl.
 
 ## Future Enhancements
 
