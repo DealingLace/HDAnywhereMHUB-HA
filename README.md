@@ -81,8 +81,7 @@ logger:
 
 ## Known Limitations
 
-- When the device is turned on or off, an API call is made to ensure the trigger was performed successfully, however, the MHUB does not immediately report that it is on, like it does when you turn it off. Therefore, since the integration never assumes the state of the device, there is a delay on an "on" request, as it will only report it's true state when available.
-- Similarly (distantly), other media player entities will take a little longer to report their states back to HA.
+The MHUB device does not push state updates, so when it’s turned on or off, the integration sends an API call to verify the command was executed successfully. Although the MHUB responds with the "off" state immediately, it may take a few seconds to confirm the "on" state. Home Assistant, which polls the device every 10 seconds, may still catch the update within this interval by chance, even though the response can vary. This polling interval also means that other media players experience a similar potential delay of up to 10 seconds before accurately reporting their true state in Home Assistant.
 
 ## Making use of the Universal Media Player
 
