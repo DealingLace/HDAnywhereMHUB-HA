@@ -17,10 +17,36 @@ PLATFORM_SCHEMA = vol.Schema({
     vol.Required(CONF_IP_ADDRESS): cv.string
 }, extra=vol.ALLOW_EXTRA)
 
+def get_zone_data_2_1(ip_address):
+    """Retrieve and return zone data from the MHUB 2.1 API."""
+    try:
+        url = f"http://{ip_address}/api/data/102"
+        response = requests.get(url)
+        if response.status_code == 200:
+            zone_data = response.json().get("data", [])
+            # Create a dictionary mapping output IDs to zone labels and additional info
+            zone_mapping = {}
+            for zone in zone_data:
+                for output in zone.get("outputs", []):
+                    zone_mapping[output["output_id"]] = {
+                        "zone_label": zone["zone_label"],
+                        "arc_input": output.get("arc_input"),
+                        "auto_switch_mode": zone.get("auto_switch_mode", False)
+                    }
+            return zone_mapping
+        else:
+            _LOGGER.error(f"Failed to retrieve zone data: {response.status_code}")
+    except Exception as e:
+        _LOGGER.error(f"Error fetching zone data: {e}")
+    return {}
+
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the HDAnywhere MHUB media player platform."""
     ip_address = config.get(CONF_IP_ADDRESS)
     
+    # Fetch zone data to map outputs to zone labels for API 2.1
+    zone_mapping = get_zone_data_2_1(ip_address)
+
     # Fetch system information from the API
     base_url = f"http://{ip_address}/api/data/100/"
     try:
@@ -29,7 +55,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
             data = response.json()
 
             # Extract the MHUB name
-            mhub_name = data["data"]["mhub"]["mhub_name"]
+            mhub_name = data["data"]["mhub"].get("mhub_name", "MHUB")
 
             # Log the data to inspect its structure
             _LOGGER.debug(f"Received system data: {data}")
@@ -40,24 +66,40 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
             inputs = io_data["input_video"]  # List of input video sources
             outputs = io_data["output_video"]  # List of output video ports
 
-            # Create media player entities for each output
+            # Create media player entities for each active zone output
             media_players = []
             for output in outputs:
-                output_id = output.get("start_label", "Unknown")  # Use start_label as the output ID (e.g., A, B)
+                output_type = output.get("type", "unknown")
                 
-                # Prepare available sources (input labels)
-                available_sources = {}
-                for input_data in inputs:
-                    # Check if any label contains 'show' attribute
-                    any_show_attribute = any('show' in label for label in input_data.get('labels', []))
+                # Use each label within 'labels' to create separate entities
+                for label in output.get("labels", []):
+                    output_id = label.get("id", "Unknown")
+                    
+                    # Check if this output is part of an active zone
+                    if output_id not in zone_mapping:
+                        continue  # Skip outputs not assigned to an active zone
+                    
+                    # Retrieve zone details
+                    zone_details = zone_mapping[output_id]
+                    zone_label = zone_details["zone_label"]
 
-                    for label in input_data.get('labels', []):
-                        # If 'show' attribute is present, use it to filter; otherwise, include all
-                        if not any_show_attribute or label.get('show', True):
-                            available_sources[label['id']] = label['label']
+                    # Prepare available sources (input labels)
+                    available_sources = {}
+                    for input_data in inputs:
+                        any_show_attribute = any('show' in label for label in input_data.get('labels', []))
+                        for input_label in input_data.get('labels', []):
+                            if not any_show_attribute or input_label.get('show', True):
+                                available_sources[input_label['id']] = input_label['label']
 
-                # Pass both inputs and outputs to the media player
-                media_players.append(HDAnywhereMHUBMediaPlayer(ip_address, output_id, available_sources, mhub_name))
+                    # Simplified entity naming: (Zone Name) (Output ID) (Type)
+                    entity_name = f"{zone_label} ({output_id}) ({output_type})"
+
+                    # Pass both inputs and outputs to the media player
+                    media_players.append(
+                        HDAnywhereMHUBMediaPlayer(
+                            ip_address, output_id, entity_name, available_sources, mhub_name, output_type
+                        )
+                    )
 
             add_entities(media_players, True)
         else:
@@ -68,14 +110,16 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 class HDAnywhereMHUBMediaPlayer(MediaPlayerEntity):
     """Representation of a Media Player for HDAnywhere MHUB."""
 
-    def __init__(self, ip_address, output_id, available_inputs, mhub_name):
+    def __init__(self, ip_address, output_id, entity_name, available_inputs, mhub_name, output_type):
         """Initialize the media player."""
         self._ip_address = ip_address
-        self._output_id = output_id  # Unique ID for each output, like "A", "B", etc.
+        self._output_id = output_id  # Unique ID for each output
+        self._name = entity_name  # Assign the name based on the zone label
         self._state = STATE_OFF
         self._source = None
         self.base_url = f"http://{self._ip_address}/api"
         self._mhub_name = mhub_name  # Assign the mhub_name passed in the constructor
+        self._output_type = output_type  # e.g., 'hdmi' or 'hdbaset'
         
         # Store available inputs dynamically
         self._available_sources = {str(k): f"{v}" for k, v in available_inputs.items()}
@@ -83,7 +127,7 @@ class HDAnywhereMHUBMediaPlayer(MediaPlayerEntity):
     @property
     def name(self):
         """Return the name of the media player."""
-        return f"{self._mhub_name} {self._output_id}"
+        return self._name
 
     @property
     def unique_id(self):
