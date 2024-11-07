@@ -60,7 +60,7 @@ Each media player entity is named based on the zone name allocated to it, along 
 
 ### 4. Unique Entity IDs
 
-The integration automatically assigns a unique entity ID for each output based on the MHUB name, the output ID (like A, B, C), and the IP address. This ensures persistent tracking across Home Assistant restarts.
+The integration automatically assigns a unique entity ID for each output based on the zone names mentioned above. This ensures persistent tracking across Home Assistant restarts, and also means they are completely customizeable within HA.
 
 ## Logging
 
@@ -76,8 +76,8 @@ logger:
 ## How It Works
 
 - Platform Initialization: On setup, the integration makes an API request to the MHUB device to fetch the list of video input and output ports.
-- Entity Creation: For each output port, a media player entity is created in Home Assistant. Each entity is assigned a unique name and ID based on the MHUB name and the output ID.
-- Media Player Features: Each media player entity supports turning the matrix on/off and selecting video input sources for each output.
+- Entity Creation: For each output port, a media player entity is created in Home Assistant. Each entity is assigned a unique name and ID based on the zone names and the output ID.
+- Media Player Features: Each media player entity supports turning the matrix on/off and selecting available video input sources for each output. Currently, there is no way to remove sources from specific media players, like you can in uControl.
 
 ## Known Limitations
 
@@ -92,11 +92,12 @@ logger:
 - Control for stacked MHUB Systems
 - Adding IR and CEC control for existing control packs.
 - Adding passthrough control for IR and CEC for custom codes
+- A way to remove sources from specific media players, like you can in uControl.
 
 ## Troubleshooting
 
 ### First place to start
-   - Ensure the MHUB is compatible with MHUB API v2.1
+   - Ensure the MHUB is compatible with MHUB API v2.1, please go to the v2.0 branch for a compatible version.
 
 ### If the media player entities do not show up, ensure that:
    - You have restarted Home Assistant after configuring the integration.
