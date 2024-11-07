@@ -9,7 +9,7 @@ This custom Home Assistant integration provides support for controlling HDAnywhe
 - **Source Selection**: Change the video input source for each output.
 - **State Monitoring**: Monitor the state of the MHUB (on/off).
 - **Unique Entity IDs**: Automatically assigns unique IDs for each MHUB output entity.
-- For backwards compatibility with API v2.0, please see the api2.0 branch.
+- For backwards compatibility with API v2.0, please see the api_v2.0 branch for a compatible version.
 
 ## Installation
 
@@ -98,7 +98,7 @@ logger:
 ## Troubleshooting
 
 ### First place to start
-   - Ensure the MHUB is compatible with MHUB API v2.1, otherwise please go to the v2.0 branch for a compatible version.
+   - Ensure the MHUB is compatible with MHUB API v2.1, otherwise please go to the api_v2.0 branch for a compatible version.
 
 ### If the media player entities do not show up, ensure that:
    - You have restarted Home Assistant after configuring the integration.
