@@ -32,6 +32,14 @@ media_player:
     ip_address: 192.168.1.100  # Replace with your MHUB's IP address
 ```
 
+You can similarly configure a switch entity alongside the media player entites, just for power control:
+
+```
+switch:
+  - platform: hdanywheremhub
+    ip_address: 192.168.1.100  # Replace with your MHUB's IP address
+```
+
 #### Restart Home Assistant
 
 Once the configuration is added, restart Home Assistant to load the integration.
