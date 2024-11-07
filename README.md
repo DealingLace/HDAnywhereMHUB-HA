@@ -90,6 +90,7 @@ logger:
 - HACS integration and graphical setup screen
 - Discovery of MHUB devices on network with auto-configure
 - Control for stacked MHUB Systems
+- Control for audio matrices, including holistic integration back into the video matrix media player entity.
 - Adding IR and CEC control for existing control packs.
 - Adding passthrough control for IR and CEC for custom codes
 - A way to remove sources from specific media players, like you can in uControl.
@@ -97,9 +98,9 @@ logger:
 ## Troubleshooting
 
 ### First place to start
-   - Ensure the MHUB is compatible with MHUB API v2.1, please go to the v2.0 branch for a compatible version.
+   - Ensure the MHUB is compatible with MHUB API v2.1, otherwise please go to the v2.0 branch for a compatible version.
 
 ### If the media player entities do not show up, ensure that:
    - You have restarted Home Assistant after configuring the integration.
-   - The correct IP address is configured in the configuration.yaml file.
+   - The correct IP address is configured in the configuration.yaml file, and that the MHUB is on the same LAN as your HA instance.
    - Enable debug logging and check the Home Assistant logs for detailed information if issues arise.
