@@ -48,7 +48,7 @@ Once the configuration is added, restart Home Assistant to load the integration.
 
 ### 1. Power Control
 
-The media player entities created by this integration allow you to turn the MHUB outputs on and off. You can control power using Home Assistant's media player controls.
+The media player entities created by this integration allow you to turn the MHUB on and off. You can control power using Home Assistant's media player controls.
 
 ### 2. Input Source Selection
 
