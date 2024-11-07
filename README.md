@@ -48,9 +48,7 @@ You can switch between available input sources using the source feature. The ava
 
 ### 3. Entity Names
 
-Each media player entity is named based on the MHUB device name and the output port.
-
-- Note that the device name is not the component name from the manufacturer, rather what was assigned to it during setup (eg. House CoolGuy A, House CoolGuy B)
+Each media player entity is named based on the zone name allocated to it, along with the actual output port and the type of connection, ie: "Living Room (B) (hdbaset)"
 
 ### 4. Unique Entity IDs
 
