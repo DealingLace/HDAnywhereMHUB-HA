@@ -2,7 +2,7 @@
   "domain": "hdanywheremhub",
   "name": "HDAnywhere MHUB Integration",
   "version": "0.0.1",
-  "documentation": "https://greentechsolutions.co.za",
+  "documentation": "https://github.com/DealingLace/HDAnywhereMHUB-HA",
   "dependencies": [],
   "codeowners": ["@DealingLace"],
   "requirements": ["requests>=2.25.1"],
