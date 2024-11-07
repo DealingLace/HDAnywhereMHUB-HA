@@ -92,7 +92,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
                                 available_sources[input_label['id']] = input_label['label']
 
                     # Simplified entity naming: (Zone Name) (Output ID) (Type)
-                    entity_name = f"{zone_label} ({output_id}) ({output_type})"
+                    entity_name = f"{zone_label} ({output_id.upper()}) ({output_type})"
 
                     # Pass both inputs and outputs to the media player
                     media_players.append(
