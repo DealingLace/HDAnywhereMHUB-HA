@@ -19,7 +19,7 @@ This custom Home Assistant integration provides support for controlling HDAnywhe
    - Download and extract the contents of this repository.
 
 2. **Move Files**:
-   - Copy the `hdanywheremhub` folder to your Home Assistant configuration's `custom_components` directory.
+   - Copy the contents to the `hdanywheremhub` folder in your Home Assistant configuration's `custom_components` directory.
    - If this directory does not exist, create it.
 
 ## Configuration
