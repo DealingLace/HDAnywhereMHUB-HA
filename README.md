@@ -1,5 +1,7 @@
 # HDAnywhere MHUB Home Assistant Integration
 
+## Ensure the MHUB is compatible with MHUB API v2.1, otherwise please go to the api_v2.0 branch for a compatible version.
+
 This custom Home Assistant integration provides support for controlling HDAnywhere MHUB devices (API 2.1+) as media players. With this integration, you can monitor and control the power, as well as switch available inputs to available outputs from within Home Assistant.
 
 ## Features
