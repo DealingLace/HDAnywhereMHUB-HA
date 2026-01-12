@@ -1,0 +1,6 @@
+{
+  "name": "HDAnywhere MHUB",
+  "render_readme": true,
+  "homeassistant": "2023.1.0",
+  "iot_class": "Local Polling"
+}

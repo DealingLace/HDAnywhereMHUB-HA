@@ -1,0 +1,57 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up HDAnywhere MHUB",
+        "description": "Enter the IP address of your HDAnywhere MHUB device.",
+        "data": {
+          "host": "IP Address"
+        }
+      },
+      "zeroconf_confirm": {
+        "title": "Confirm discovered MHUB",
+        "description": "Do you want to add the HDAnywhere MHUB device '{name}' at {host}?"
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the device. Please check the IP address and ensure the device is powered on and accessible on the network.",
+      "timeout": "Connection to the device timed out. Please check your network connection and try again.",
+      "unknown": "An unexpected error occurred. Please check the logs for more information.",
+      "already_configured": "This device is already configured."
+    },
+    "abort": {
+      "already_configured": "This MHUB device is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure {name}",
+        "description": "Adjust the settings for your HDAnywhere MHUB device.",
+        "data": {
+          "scan_interval": "Update interval (seconds)"
+        }
+      }
+    }
+  },
+  "services": {
+    "switch_output": {
+      "name": "Switch output",
+      "description": "Switch a specific output to a specific input source.",
+      "fields": {
+        "target_output": {
+          "name": "Output ID",
+          "description": "The output to switch (e.g., 'a', 'b', 'c')."
+        },
+        "target_input": {
+          "name": "Input ID",
+          "description": "The input source to switch to (e.g., '1', '2', '3')."
+        }
+      }
+    },
+    "refresh_sources": {
+      "name": "Refresh sources",
+      "description": "Refresh the list of available input sources and zone configuration from the device."
+    }
+  }
+}

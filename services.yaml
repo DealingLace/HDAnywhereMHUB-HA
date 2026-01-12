@@ -1,0 +1,24 @@
+# Services for HDAnywhere MHUB Integration
+
+switch_output:
+  name: Switch Output
+  description: Switch a specific output to a specific input source directly.
+  fields:
+    target_output:
+      name: Target Output
+      description: The output ID to switch (e.g., 'a', 'b', 'c', 'd')
+      required: true
+      example: "a"
+      selector:
+        text:
+    target_input:
+      name: Target Input
+      description: The input ID to switch to (e.g., '1', '2', '3', '4')
+      required: true
+      example: "1"
+      selector:
+        text:
+
+refresh_sources:
+  name: Refresh Sources
+  description: Force a refresh of input sources and zone configuration from the device. Use this after making configuration changes on the MHUB device.

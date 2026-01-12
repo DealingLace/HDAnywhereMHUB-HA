@@ -1,89 +1,144 @@
-import requests
+"""Switch platform for HDAnywhere MHUB (legacy power control)."""
+from __future__ import annotations
+
 import logging
-import voluptuous as vol
+from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.const import CONF_IP_ADDRESS
-import homeassistant.helpers.config_validation as cv
+from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_HOST, CONF_NAME
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-# LEGACY OPTION, CONFIGURED UNDER SWITCH DOMAIN
+from .const import COORDINATOR, DOMAIN, MANUFACTURER, MODEL
+from .coordinator import MHUBDataUpdateCoordinator
+from .exceptions import MHUBException
 
 _LOGGER = logging.getLogger(__name__)
 
-# Define the domain of the component
-DOMAIN = "hdanywheremhub"
 
-# Configuration schema for the component
-PLATFORM_SCHEMA = vol.Schema({
-    vol.Required(CONF_IP_ADDRESS): cv.string
-}, extra=vol.ALLOW_EXTRA)
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up MHUB switch entity from config entry.
+
+    This creates a single switch entity for power control of the entire device.
+    This is a legacy feature - users should prefer media player entities for control.
+
+    Args:
+        hass: Home Assistant instance
+        entry: Config entry
+        async_add_entities: Callback to add entities
+    """
+    coordinator: MHUBDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][COORDINATOR]
+    device_name = entry.data.get(CONF_NAME)
+    host = entry.data[CONF_HOST]
+
+    # Create single switch entity for device power control
+    async_add_entities([HDAnywhereMHUBSwitch(coordinator, entry.entry_id, device_name, host)])
+
+    _LOGGER.info("Set up MHUB switch entity")
 
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up the HDAnywhere MHUB switch platform."""
-    ip_address = config.get(CONF_IP_ADDRESS)
-    add_entities([HDAnywhereMHUBSwitch(ip_address)], True)
+class HDAnywhereMHUBSwitch(CoordinatorEntity[MHUBDataUpdateCoordinator], SwitchEntity):
+    """Representation of a HDAnywhere MHUB Switch for power control.
 
+    This switch controls the entire MHUB device power state.
+    Uses coordinator for efficient shared state management.
 
-class HDAnywhereMHUBSwitch(SwitchEntity):
-    """Representation of a REST API controlled switch for HDAnywhere MHUB."""
+    Note: This is a legacy entity type. Media player entities provide
+    the same functionality with additional features.
+    """
 
-    def __init__(self, ip_address):
-        """Initialize the switch."""
-        self._ip_address = ip_address
-        self._state = False
-        self.base_url = f"http://{self._ip_address}/api"
+    _attr_has_entity_name = True
+    _attr_device_class = SwitchDeviceClass.OUTLET
+
+    def __init__(
+        self,
+        coordinator: MHUBDataUpdateCoordinator,
+        entry_id: str,
+        device_name: str,
+        host: str,
+    ) -> None:
+        """Initialize the switch.
+
+        Args:
+            coordinator: Data update coordinator
+            entry_id: Config entry ID
+            device_name: MHUB device name
+            host: MHUB IP address
+        """
+        super().__init__(coordinator)
+
+        self._device_name = device_name
+        self._host = host
+
+        # Entity naming
+        self._attr_name = "Power"
+
+        # Unique ID for entity registry
+        self._attr_unique_id = f"{device_name}_{host.replace('.', '_')}_switch".replace(" ", "_")
+
+        # Device info for grouping with other MHUB entities
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, entry_id)},
+            "name": device_name,
+            "manufacturer": MANUFACTURER,
+            "model": MODEL,
+            "configuration_url": f"http://{host}",
+        }
+
+        _LOGGER.debug("Initialized MHUB switch entity for %s", device_name)
 
     @property
-    def name(self):
-        """Return the name of the switch."""
-        return f"MHUB Switch {self._ip_address}"
-
-    @property
-    def is_on(self):
+    def is_on(self) -> bool:
         """Return true if the switch is on."""
-        return self._state
+        return self.coordinator.data.device_state.get("power", False)
 
-    def turn_on(self, **kwargs):
-        """Turn the switch on."""
-        url = f"{self.base_url}/power/1/"  # Turn On (fix this to ensure "0" is ON)
-        try:
-            response = requests.post(url)
-            if response.status_code == 200:
-                _LOGGER.info("Turn on command sent successfully.")
-                self._state = True  # Ensure state reflects the device being ON
-                self.update()  # Manually check the device state after the command
-            else:
-                _LOGGER.error(f"Failed to turn on the switch: {response.status_code}")
-        except Exception as e:
-            _LOGGER.error(f"Error turning on switch: {e}")
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return entity specific state attributes."""
+        return {
+            "device": self._device_name,
+            "host": self._host,
+        }
 
-    def turn_off(self, **kwargs):
-        """Turn the switch off."""
-        url = f"{self.base_url}/power/0/"  # Turn Off (fix this to ensure "1" is OFF)
-        try:
-            response = requests.post(url)
-            if response.status_code == 200:
-                _LOGGER.info("Turn off command sent successfully.")
-                self._state = False  # Ensure state reflects the device being OFF
-                self.update()  # Manually check the device state after the command
-            else:
-                _LOGGER.error(f"Failed to turn off the switch: {response.status_code}")
-        except Exception as e:
-            _LOGGER.error(f"Error turning off switch: {e}")
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the switch on.
 
-    def update(self):
-        """Fetch the latest state of the switch from the device."""
-        url = f"{self.base_url}/data/0/"  # Get State
+        Args:
+            **kwargs: Additional arguments (not used)
+        """
+        _LOGGER.info("Turning on MHUB device via switch")
+
         try:
-            response = requests.get(url)
-            if response.status_code == 200:
-                data = response.json()
-                # Use the nested structure to get the power status
-                # Ensure True means "on" and False means "off"
-                self._state = data['data']['power'] == True  
-                _LOGGER.info(f"Switch state updated: {'on' if self._state else 'off'}")
-            else:
-                _LOGGER.error(f"Failed to update switch state: {response.status_code}")
-        except Exception as e:
-            _LOGGER.error(f"Error updating switch state: {e}")
+            await self.coordinator.async_set_power(True)
+            _LOGGER.info("Successfully turned on MHUB device")
+        except MHUBException as err:
+            _LOGGER.error("Failed to turn on device: %s", err)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn the switch off.
+
+        Args:
+            **kwargs: Additional arguments (not used)
+        """
+        _LOGGER.info("Turning off MHUB device via switch")
+
+        try:
+            await self.coordinator.async_set_power(False)
+            _LOGGER.info("Successfully turned off MHUB device")
+        except MHUBException as err:
+            _LOGGER.error("Failed to turn off device: %s", err)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator.
+
+        This is called automatically when coordinator data changes.
+        """
+        _LOGGER.debug("Received coordinator update for switch")
+        self.async_write_ha_state()

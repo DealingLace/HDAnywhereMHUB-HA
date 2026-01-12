@@ -1,115 +1,308 @@
 # HDAnywhere MHUB Home Assistant Integration
 
-## Ensure the MHUB is compatible with MHUB API v2.1, otherwise please go to the api_v2.0 branch for a compatible version.
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![GitHub release](https://img.shields.io/github/release/DealingLace/HDAnywhereMHUB-HA.svg)](https://github.com/DealingLace/HDAnywhereMHUB-HA/releases)
 
-This custom Home Assistant integration provides support for controlling HDAnywhere MHUB devices (API 2.1+) as media players. With this integration, you can monitor and control the power, as well as switch available inputs to available outputs from within Home Assistant.
+A modern, fully async Home Assistant integration for controlling HDAnywhere MHUB matrix switchers (API v2.1+).
 
-## Features
+## ✨ What's New in v2.0
 
-- **Control MHUB Outputs**: Each output is represented as a media player entity in Home Assistant.
-- **Power Control**: Turn MHUB on or off from the media player entity in the Home Assistant dashboard.
-- **Source Selection**: Change the video input source for each output.
-- **State Monitoring**: Monitor the state of the MHUB (on/off).
-- **Unique Entity IDs**: Automatically assigns unique IDs for each MHUB output entity.
-- For backwards compatibility with API v2.0, please see the api_v2.0 branch for a compatible version.
+This is a **complete rewrite** with production-ready features:
 
-## Installation
+- 🚀 **Fully Async** - Non-blocking I/O operations for optimal Home Assistant performance
+- 🔄 **Efficient Polling** - Single coordinator manages all entities, reducing network traffic
+- 🎯 **UI Configuration** - Beautiful config flow with automatic device discovery
+- 🔍 **Zeroconf Discovery** - Automatically finds MHUB devices on your network
+- 🛡️ **Robust Error Handling** - Automatic retries with exponential backoff
+- 📊 **Diagnostics Support** - Easy troubleshooting with downloadable diagnostics
+- 🎨 **Device Registry** - All entities grouped under a single device
+- ⚙️ **Custom Services** - Advanced control beyond the UI
+- 🌐 **Internationalization** - Translation-ready with full i18n support
+- 📝 **Type Hints** - Fully typed for better IDE support and maintainability
+
+## 🔧 Requirements
+
+- Home Assistant 2023.1.0 or newer
+- HDAnywhere MHUB with API v2.1 or later
+- MHUB device accessible on your local network
+
+> **Note:** For API v2.0 compatibility, use the [api_v2.0 branch](https://github.com/DealingLace/HDAnywhereMHUB-HA/tree/api_v2.0)
+
+## 📥 Installation
+
+### HACS (Recommended)
+
+1. Open HACS in Home Assistant
+2. Click the three dots in the top right corner
+3. Select "Custom repositories"
+4. Add this repository URL: `https://github.com/DealingLace/HDAnywhereMHUB-HA`
+5. Select category: "Integration"
+6. Click "Add"
+7. Find "HDAnywhere MHUB" in HACS and click "Download"
+8. Restart Home Assistant
 
 ### Manual Installation
 
-1. **Download the Repository**:
-   - Download and extract the contents of this repository.
+1. Download the latest release from the [releases page](https://github.com/DealingLace/HDAnywhereMHUB-HA/releases)
+2. Extract the `hdanywheremhub` folder to `custom_components/` in your Home Assistant configuration directory
+3. Restart Home Assistant
 
-2. **Move Files**:
-   - Copy the contents to the `hdanywheremhub` folder in your Home Assistant configuration's `custom_components` directory.
-   - If this directory does not exist, create it.
+## ⚙️ Configuration
 
-## Configuration
+### UI Setup (Recommended)
 
-To set up the integration, you need to configure it through the configuration.yaml file. Add the following configuration under the media_player domain:
+1. Go to **Settings** → **Devices & Services**
+2. Click **+ Add Integration**
+3. Search for "HDAnywhere MHUB"
+4. Enter your MHUB's IP address
+5. Click **Submit**
 
-```
+The integration will automatically:
+- Connect to your MHUB device
+- Fetch device information
+- Create media player entities for each configured zone
+- Create a switch entity for power control
+
+### Automatic Discovery
+
+If your MHUB supports zeroconf/mDNS, it will be automatically discovered:
+
+1. Go to **Settings** → **Devices & Services**
+2. Look for a discovered "HDAnywhere MHUB" device
+3. Click **Configure**
+4. Confirm the device
+
+### Legacy YAML Configuration (Deprecated)
+
+> ⚠️ YAML configuration is deprecated and will be removed in a future version. Please migrate to UI configuration.
+
+```yaml
+# Remove this from configuration.yaml and use UI setup instead
 media_player:
   - platform: hdanywheremhub
-    ip_address: 192.168.1.100  # Replace with your MHUB's IP address
-```
+    ip_address: 192.168.1.100
 
-You can similarly configure a switch entity alongside the media player entites, just for power control:
-
-```
 switch:
   - platform: hdanywheremhub
-    ip_address: 192.168.1.100  # Replace with your MHUB's IP address
+    ip_address: 192.168.1.100
 ```
 
-#### Restart Home Assistant
+## 🎮 Features
 
-Once the configuration is added, restart Home Assistant to load the integration.
+### Media Player Entities
 
-## Features and Capabilities
+Each zone output becomes a media player entity with:
 
-### 1. Power Control
+- **Power Control** - Turn the entire MHUB on/off
+- **Source Selection** - Switch between available inputs
+- **State Monitoring** - Real-time power state updates
+- **Zone Information** - Displays zone name, output type (HDMI/HDBaseT), and configuration
 
-The media player entities created by this integration allow you to turn the MHUB on and off. You can control power using Home Assistant's media player controls.
+**Entity Naming Format:** `media_player.[zone_name]_[output_id]_[type]`
 
-### 2. Input Source Selection
+Example: `media_player.living_room_b_hdbaset`
 
-You can switch between available input sources using the source feature. The available sources are dynamically fetched from the MHUB device and displayed in Home Assistant.
+### Switch Entity
 
-### 3. Entity Names
+A single switch entity for simple on/off control of the entire device:
 
-Each media player entity is named based on the zone name allocated to it, along with the actual output port and the type of connection, ie: "Living Room (B) (hdbaset)"
+- `switch.[device_name]_power`
 
-### 4. Unique Entity IDs
+### Device Information
 
-The integration automatically assigns a unique entity ID for each output based on the zone names mentioned above. This ensures persistent tracking across Home Assistant restarts, and also means they are completely customizeable within HA.
+All entities are grouped under a single MHUB device showing:
 
-## Logging
+- Device name
+- Firmware version
+- Hardware version
+- Serial number
+- Configuration URL (click to open device web interface)
 
-The integration logs detailed information that can be useful for debugging. You can enable debug logging in Home Assistant by adding the following configuration to your configuration.yaml:
+### Extra State Attributes
 
+Each media player provides additional attributes:
+
+- `output_id` - Output port identifier
+- `output_type` - Connection type (hdmi/hdbaset)
+- `zone_label` - Zone name from device
+- `arc_input` - ARC input configuration
+- `auto_switch_mode` - Automatic switching status
+- `mhub_name` - Device name
+
+## 🔧 Advanced Features
+
+### Custom Services
+
+#### `hdanywheremhub.switch_output`
+
+Directly switch any output to any input without using the UI:
+
+```yaml
+service: hdanywheremhub.switch_output
+data:
+  target_output: "a"
+  target_input: "3"
 ```
+
+#### `hdanywheremhub.refresh_sources`
+
+Force refresh of input sources and zone configuration:
+
+```yaml
+service: hdanywheremhub.refresh_sources
+```
+
+Use this after reconfiguring zones or inputs on the MHUB device.
+
+### Configuration Options
+
+Click **Configure** on your MHUB device in the UI to adjust:
+
+- **Update Interval** - How often to poll the device (5-300 seconds, default: 10)
+
+### Diagnostics
+
+To download diagnostic information for troubleshooting:
+
+1. Go to **Settings** → **Devices & Services**
+2. Click on your MHUB device
+3. Click the three dots menu
+4. Select **Download diagnostics**
+
+This provides a JSON file with device state, configuration, and system information (no sensitive data included).
+
+## 🏗️ Architecture
+
+### Modern Design Patterns
+
+- **Async API Client** - Non-blocking HTTP requests with aiohttp
+- **Data Coordinator** - Single polling cycle shared by all entities
+- **Config Flow** - User-friendly UI setup with validation
+- **Type Hints** - Full type annotations throughout
+- **Exception Handling** - Granular exception types with automatic recovery
+- **Connection Pooling** - Efficient resource usage
+- **Exponential Backoff** - Smart retry logic for reliability
+
+### Performance Optimizations
+
+- **Cached Static Data** - System info and zone data cached to reduce API calls
+- **Shared Sessions** - Single HTTP session reused across requests
+- **Efficient Updates** - Only device state polled regularly, configuration cached
+- **Immediate Refresh** - Commands trigger instant coordinator update
+
+## 🐛 Troubleshooting
+
+### Entities Not Appearing
+
+1. Verify MHUB API version is 2.1+ (check device web interface)
+2. Ensure zones are configured on the MHUB device
+3. Check Home Assistant logs for errors
+4. Try removing and re-adding the integration
+
+### Connection Issues
+
+1. Verify IP address is correct
+2. Ensure MHUB is powered on and accessible
+3. Check firewall settings
+4. Test connection: `curl http://[MHUB_IP]/api/data/0`
+
+### Enable Debug Logging
+
+Add to `configuration.yaml`:
+
+```yaml
 logger:
   default: warning
   logs:
     custom_components.hdanywheremhub: debug
 ```
 
-## How It Works
+Then check Home Assistant logs for detailed information.
 
-- Platform Initialization: On setup, the integration makes an API request to the MHUB device to fetch the list of video input and output ports.
-- Entity Creation: For each zone created that's assigned to an output port, a media player entity is created in Home Assistant. Each entity is assigned a unique name and ID based on the zone names and the output ID.
-- Media Player Features: Each media player entity supports turning the matrix on/off and selecting available video input sources for each output. Currently, there is no way to remove sources from specific media players, like you can in uControl.
+### Download Diagnostics
 
-## Known Limitations
+Use the diagnostics feature (see above) to gather information for bug reports.
 
-The MHUB device does not push state updates, so when it’s turned on or off, the integration sends an API call to verify the command was executed successfully. Although the MHUB responds with the "off" state immediately, it may take a few seconds to confirm the "on" state. Home Assistant, which polls the device every 10 seconds, may still catch the update within this interval by chance, even though the response can vary. This polling interval also means that other media players experience a similar potential delay of up to 10 seconds before accurately reporting their true state in Home Assistant.
+## 🤝 Integration with Universal Media Player
 
-## Making use of the Universal Media Player
+Home Assistant's [Universal Media Player](https://www.home-assistant.io/integrations/universal/) allows combining MHUB outputs with your endpoint devices:
 
-- Home Assistant is a very powerful and customizeable tool, thus, there are ways to bypass most limitations found in this integration.
-"A universal media player can combine multiple existing entities in Home Assistant into a single media player entity. This is used to create a single media player entity that can control an entire media center."
-Simply put, you can embedd these media players into your existing endpoint devices (AVR's, Media Players, Consoles, etc) and create a holistically integrated entity.
-- Paired with third party integrations like Universal Remote, as well as SmartIR (For controlling non-smart IR appliances), you can create a similar, yet much better, more integrated experience than the one found in uControl.
+```yaml
+media_player:
+  - platform: universal
+    name: Living Room Entertainment
+    children:
+      - media_player.living_room_b_hdbaset
+      - media_player.living_room_tv
+      - media_player.living_room_receiver
+    commands:
+      turn_on:
+        service: media_player.turn_on
+        target:
+          entity_id: media_player.living_room_b_hdbaset
+      turn_off:
+        service: media_player.turn_off
+        target:
+          entity_id: media_player.living_room_b_hdbaset
+```
 
-## Future Enhancements
+Combine with:
+- [Universal Remote](https://www.home-assistant.io/integrations/remote/) for comprehensive control
+- [SmartIR](https://github.com/smartHomeHub/SmartIR) for IR device control
+- Automations to create scenes and multi-device control
 
-- Refactoring API calls into a PyPI library to fit HA guidelines
-- Implementing more error handling and feedback when API requests fail.
-- HACS integration and graphical setup screen
-- Discovery of MHUB devices on network with auto-configure
-- Control for stacked MHUB Systems
-- Control for audio matrices, including holistic integration back into the video matrix media player entity.
-- Adding IR and CEC control for existing control packs.
-- Adding passthrough control for IR and CEC for custom codes
-- A way to remove sources from specific media players, like you can in uControl.
+## 📋 Known Limitations
 
-## Troubleshooting
+- **No Per-Output State** - API doesn't provide which input is active on each output
+- **Global Power** - Power control affects the entire matrix, not individual outputs
+- **Polling Delay** - State updates may take up to the configured scan interval (default: 10s)
+- **Single Device** - Currently supports one MHUB device per integration instance
 
-### First place to start
-   - Ensure the MHUB is compatible with MHUB API v2.1, otherwise please go to the api_v2.0 branch for a compatible version.
+## 🛣️ Roadmap
 
-### If the media player entities do not show up, ensure that:
-   - You have restarted Home Assistant after configuring the integration.
-   - The correct IP address is configured in the configuration.yaml file, and that the MHUB is on the same LAN as your HA instance.
-   - Enable debug logging and check the Home Assistant logs for detailed information if issues arise.
+Future enhancements planned:
+
+- [ ] PyPI library for MHUB API (for easier maintenance and testing)
+- [ ] Support for stacked MHUB systems
+- [ ] Audio matrix control
+- [ ] IR and CEC control integration
+- [ ] Custom code pass-through for IR/CEC
+- [ ] Per-zone source filtering (like uControl)
+- [ ] Local source state tracking
+- [ ] API v2.0 auto-detection and compatibility mode
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with appropriate tests
+4. Submit a pull request
+
+For bugs, please include:
+- Home Assistant version
+- Integration version
+- MHUB firmware version
+- Diagnostic data (if possible)
+- Steps to reproduce
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- HDAnywhere for the MHUB API documentation
+- Home Assistant community for integration guidelines
+- All contributors and users providing feedback
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/DealingLace/HDAnywhereMHUB-HA/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/DealingLace/HDAnywhereMHUB-HA/discussions)
+- **Documentation**: This README and code docstrings
+
+---
+
+**Made with ❤️ for the Home Assistant community**

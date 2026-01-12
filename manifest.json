@@ -1,11 +1,13 @@
 {
   "domain": "hdanywheremhub",
-  "name": "HDAnywhere MHUB Integration",
-  "version": "0.0.1",
+  "name": "HDAnywhere MHUB",
+  "version": "2.0.0",
   "documentation": "https://github.com/DealingLace/HDAnywhereMHUB-HA",
+  "issue_tracker": "https://github.com/DealingLace/HDAnywhereMHUB-HA/issues",
   "dependencies": [],
   "codeowners": ["@DealingLace"],
-  "requirements": ["requests>=2.25.1"],
+  "requirements": ["aiohttp>=3.8.0", "async-timeout>=4.0.0"],
+  "config_flow": true,
   "zeroconf": [
     {
       "type": "_http._tcp.local.",
@@ -15,5 +17,6 @@
       "type": "_hda._tcp.local.",
       "name": "MHUB"
     }
-  ]
+  ],
+  "iot_class": "local_polling"
 }

@@ -1,225 +1,235 @@
-import requests
-import logging
-import voluptuous as vol
+"""Media Player platform for HDAnywhere MHUB."""
+from __future__ import annotations
 
-from homeassistant.components.media_player import MediaPlayerEntity
-from homeassistant.components.media_player import MediaPlayerEntityFeature
-from homeassistant.const import CONF_IP_ADDRESS, STATE_OFF, STATE_ON
-import homeassistant.helpers.config_validation as cv
+import logging
+from typing import Any
+
+from homeassistant.components.media_player import (
+    MediaPlayerDeviceClass,
+    MediaPlayerEntity,
+    MediaPlayerEntityFeature,
+    MediaPlayerState,
+)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_HOST, CONF_NAME
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from .const import (
+    ATTR_ARC_INPUT,
+    ATTR_AUTO_SWITCH_MODE,
+    ATTR_MHUB_NAME,
+    ATTR_OUTPUT_ID,
+    ATTR_OUTPUT_TYPE,
+    ATTR_ZONE_LABEL,
+    COORDINATOR,
+    DOMAIN,
+    MANUFACTURER,
+    MODEL,
+)
+from .coordinator import MHUBData, MHUBDataUpdateCoordinator
+from .exceptions import MHUBException
 
 _LOGGER = logging.getLogger(__name__)
 
-# Define the domain of the component
-DOMAIN = "hdanywheremhub"
 
-# Configuration schema for the component
-PLATFORM_SCHEMA = vol.Schema({
-    vol.Required(CONF_IP_ADDRESS): cv.string
-}, extra=vol.ALLOW_EXTRA)
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up MHUB media player entities from config entry.
 
-def get_zone_data_2_1(ip_address):
-    """Retrieve and return zone data from the MHUB 2.1 API."""
-    try:
-        url = f"http://{ip_address}/api/data/102"
-        response = requests.get(url)
-        if response.status_code == 200:
-            zone_data = response.json().get("data", [])
-            # Create a dictionary mapping output IDs to zone labels and additional info
-            zone_mapping = {}
-            for zone in zone_data:
-                for output in zone.get("outputs", []):
-                    zone_mapping[output["output_id"]] = {
-                        "zone_label": zone["zone_label"],
-                        "arc_input": output.get("arc_input"),
-                        "auto_switch_mode": zone.get("auto_switch_mode", False)
-                    }
-            return zone_mapping
-        else:
-            _LOGGER.error(f"Failed to retrieve zone data: {response.status_code}")
-    except Exception as e:
-        _LOGGER.error(f"Error fetching zone data: {e}")
-    return {}
+    Args:
+        hass: Home Assistant instance
+        entry: Config entry
+        async_add_entities: Callback to add entities
+    """
+    coordinator: MHUBDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][COORDINATOR]
+    device_name = entry.data.get(CONF_NAME)
+    host = entry.data[CONF_HOST]
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up the HDAnywhere MHUB media player platform."""
-    ip_address = config.get(CONF_IP_ADDRESS)
-    
-    # Fetch zone data to map outputs to zone labels for API 2.1
-    zone_mapping = get_zone_data_2_1(ip_address)
+    # Create media player entity for each active output
+    entities: list[HDAnywhereMHUBMediaPlayer] = []
 
-    # Fetch system information from the API
-    base_url = f"http://{ip_address}/api/data/100/"
-    try:
-        response = requests.get(base_url)
-        if response.status_code == 200:
-            data = response.json()
-
-            # Extract the MHUB name
-            mhub_name = data["data"]["mhub"].get("mhub_name", "MHUB")
-
-            # Log the data to inspect its structure
-            _LOGGER.debug(f"Received system data: {data}")
-
-            # Check if inputs and outputs exist and are in the correct format
-            io_data = data["data"]["io_data"]
-
-            inputs = io_data["input_video"]  # List of input video sources
-            outputs = io_data["output_video"]  # List of output video ports
-
-            # Create media player entities for each active zone output
-            media_players = []
-            for output in outputs:
-                output_type = output.get("type", "unknown")
-                
-                # Use each label within 'labels' to create separate entities
-                for label in output.get("labels", []):
-                    output_id = label.get("id", "Unknown")
-                    
-                    # Check if this output is part of an active zone
-                    if output_id not in zone_mapping:
-                        continue  # Skip outputs not assigned to an active zone
-                    
-                    # Retrieve zone details
-                    zone_details = zone_mapping[output_id]
-                    zone_label = zone_details["zone_label"]
-
-                    # Prepare available sources (input labels)
-                    available_sources = {}
-                    for input_data in inputs:
-                        any_show_attribute = any('show' in label for label in input_data.get('labels', []))
-                        for input_label in input_data.get('labels', []):
-                            if not any_show_attribute or input_label.get('show', True):
-                                available_sources[input_label['id']] = input_label['label']
-
-                    # Simplified entity naming: (Zone Name) (Output ID) (Type)
-                    entity_name = f"{zone_label} ({output_id.upper()}) ({output_type})"
-
-                    # Pass both inputs and outputs to the media player
-                    media_players.append(
-                        HDAnywhereMHUBMediaPlayer(
-                            ip_address, output_id, entity_name, available_sources, mhub_name, output_type
-                        )
-                    )
-
-            add_entities(media_players, True)
-        else:
-            _LOGGER.error(f"Failed to retrieve system information: {response.status_code}")
-    except Exception as e:
-        _LOGGER.error(f"Error fetching system information: {e}")
-
-class HDAnywhereMHUBMediaPlayer(MediaPlayerEntity):
-    """Representation of a Media Player for HDAnywhere MHUB."""
-
-    def __init__(self, ip_address, output_id, entity_name, available_inputs, mhub_name, output_type):
-        """Initialize the media player."""
-        self._ip_address = ip_address
-        self._output_id = output_id  # Unique ID for each output
-        self._name = entity_name  # Assign the name based on the zone label
-        self._state = STATE_OFF
-        self._source = None
-        self.base_url = f"http://{self._ip_address}/api"
-        self._mhub_name = mhub_name  # Assign the mhub_name passed in the constructor
-        self._output_type = output_type  # e.g., 'hdmi' or 'hdbaset'
-        
-        # Store available inputs dynamically
-        self._available_sources = {str(k): f"{v}" for k, v in available_inputs.items()}
-
-    @property
-    def name(self):
-        """Return the name of the media player."""
-        return self._name
-
-    @property
-    def unique_id(self):
-        """Return the unique ID of the media player."""
-        # Combine MHUB name, IP address, and output ID to form a unique identifier
-        return f"{self._mhub_name}_{self._ip_address}_{self._output_id}".replace(" ", "_")
-
-    @property
-    def state(self):
-        """Return the state of the media player."""
-        return self._state
-
-    @property
-    def source(self):
-        """Return the current input source."""
-        return self._source
-
-    @property
-    def source_list(self):
-        """Return a list of available input sources."""
-        return list(self._available_sources.values())
-
-    @property
-    def supported_features(self):
-        """Flag media player features that are supported."""
-        return (
-            MediaPlayerEntityFeature.TURN_ON |
-            MediaPlayerEntityFeature.TURN_OFF |
-            MediaPlayerEntityFeature.SELECT_SOURCE
+    for output in coordinator.data.available_outputs:
+        entities.append(
+            HDAnywhereMHUBMediaPlayer(
+                coordinator=coordinator,
+                entry_id=entry.entry_id,
+                device_name=device_name,
+                host=host,
+                output_data=output,
+                available_inputs=coordinator.data.available_inputs,
+            )
         )
 
-    def turn_on(self):
+    async_add_entities(entities)
+
+    _LOGGER.info("Set up %d MHUB media player entities", len(entities))
+
+
+class HDAnywhereMHUBMediaPlayer(CoordinatorEntity[MHUBDataUpdateCoordinator], MediaPlayerEntity):
+    """Representation of a HDAnywhere MHUB Media Player.
+
+    Uses coordinator for efficient shared state management and automatic updates.
+    Fully async for optimal Home Assistant performance.
+    """
+
+    _attr_has_entity_name = True
+    _attr_device_class = MediaPlayerDeviceClass.RECEIVER
+
+    def __init__(
+        self,
+        coordinator: MHUBDataUpdateCoordinator,
+        entry_id: str,
+        device_name: str,
+        host: str,
+        output_data: dict[str, Any],
+        available_inputs: dict[str, str],
+    ) -> None:
+        """Initialize the media player.
+
+        Args:
+            coordinator: Data update coordinator
+            entry_id: Config entry ID
+            device_name: MHUB device name
+            host: MHUB IP address
+            output_data: Output configuration data
+            available_inputs: Available input sources
+        """
+        super().__init__(coordinator)
+
+        self._entry_id = entry_id
+        self._device_name = device_name
+        self._host = host
+
+        # Output information
+        self._output_id = output_data[ATTR_OUTPUT_ID]
+        self._output_type = output_data[ATTR_OUTPUT_TYPE]
+        self._zone_label = output_data[ATTR_ZONE_LABEL]
+        self._arc_input = output_data.get(ATTR_ARC_INPUT)
+        self._auto_switch_mode = output_data.get(ATTR_AUTO_SWITCH_MODE, False)
+
+        # Entity naming: "Zone Name (Output ID) (Type)"
+        self._attr_name = f"{self._zone_label} ({self._output_id.upper()}) ({self._output_type})"
+
+        # Unique ID for entity registry
+        self._attr_unique_id = (
+            f"{device_name}_{host.replace('.', '_')}_{self._output_id}".replace(" ", "_")
+        )
+
+        # Device info for grouping entities under the MHUB device
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, entry_id)},
+            "name": device_name,
+            "manufacturer": MANUFACTURER,
+            "model": MODEL,
+            "configuration_url": f"http://{host}",
+        }
+
+        # Supported features
+        self._attr_supported_features = (
+            MediaPlayerEntityFeature.TURN_ON
+            | MediaPlayerEntityFeature.TURN_OFF
+            | MediaPlayerEntityFeature.SELECT_SOURCE
+        )
+
+        _LOGGER.debug(
+            "Initialized media player: %s (output: %s, type: %s)",
+            self._attr_name,
+            self._output_id,
+            self._output_type,
+        )
+
+    @property
+    def state(self) -> MediaPlayerState:
+        """Return the state of the media player."""
+        if self.coordinator.data.device_state.get("power"):
+            return MediaPlayerState.ON
+        return MediaPlayerState.OFF
+
+    @property
+    def source(self) -> str | None:
+        """Return the current input source.
+
+        Note: The MHUB API doesn't provide per-output source state,
+        so this shows as unknown. Consider this a future enhancement
+        if the API adds support for it.
+        """
+        # TODO: Track source locally after select_source is called
+        # The API doesn't provide per-output source information
+        return None
+
+    @property
+    def source_list(self) -> list[str]:
+        """Return list of available input sources."""
+        return list(self.coordinator.data.available_inputs.values())
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return entity specific state attributes."""
+        return {
+            ATTR_OUTPUT_ID: self._output_id,
+            ATTR_OUTPUT_TYPE: self._output_type,
+            ATTR_ZONE_LABEL: self._zone_label,
+            ATTR_ARC_INPUT: self._arc_input,
+            ATTR_AUTO_SWITCH_MODE: self._auto_switch_mode,
+            ATTR_MHUB_NAME: self._device_name,
+        }
+
+    async def async_turn_on(self) -> None:
         """Turn the media player on."""
-        url = f"{self.base_url}/power/1/"
-        try:
-            response = requests.post(url)
-            if response.status_code == 200:
-                _LOGGER.info("Turn on command sent successfully.")
-                self._state = STATE_ON
-                self.update()
-            else:
-                _LOGGER.error(f"Failed to turn on the device: {response.status_code}")
-        except Exception as e:
-            _LOGGER.error(f"Error turning on device: {e}")
+        _LOGGER.info("Turning on MHUB device")
 
-    def turn_off(self):
+        try:
+            await self.coordinator.async_set_power(True)
+            _LOGGER.info("Successfully turned on MHUB device")
+        except MHUBException as err:
+            _LOGGER.error("Failed to turn on device: %s", err)
+
+    async def async_turn_off(self) -> None:
         """Turn the media player off."""
-        url = f"{self.base_url}/power/0/"
+        _LOGGER.info("Turning off MHUB device")
+
         try:
-            response = requests.post(url)
-            if response.status_code == 200:
-                _LOGGER.info("Turn off command sent successfully.")
-                self._state = STATE_OFF
-                self.update()
-            else:
-                _LOGGER.error(f"Failed to turn off the device: {response.status_code}")
-        except Exception as e:
-            _LOGGER.error(f"Error turning off device: {e}")
+            await self.coordinator.async_set_power(False)
+            _LOGGER.info("Successfully turned off MHUB device")
+        except MHUBException as err:
+            _LOGGER.error("Failed to turn off device: %s", err)
 
-    def select_source(self, source):
-        """Select the input source."""
-        # Find the input port corresponding to the selected source
-        input_port = {v: k for k, v in self._available_sources.items()}.get(source)
-        
-        if input_port:
-            url = f"{self.base_url}/control/switch/{self._output_id.lower()}/{input_port}/"
-            _LOGGER.debug(f"Switching output {self._output_id} to input {input_port} using URL: {url}")
+    async def async_select_source(self, source: str) -> None:
+        """Select input source.
 
-            try:
-                response = requests.get(url)
-                if response.status_code == 200:
-                    _LOGGER.info(f"Input switched to {source}.")
-                    self._source = source
-                    self.update()
-                else:
-                    _LOGGER.error(f"Failed to switch input: {response.status_code}. Response: {response.text}")
-            except Exception as e:
-                _LOGGER.error(f"Error switching input: {e}")
-        else:
-            _LOGGER.error(f"Invalid source selected: {source}. Available sources: {self._available_sources}")
+        Args:
+            source: Source name to switch to
+        """
+        # Find the input ID corresponding to the selected source name
+        input_mapping = {v: k for k, v in self.coordinator.data.available_inputs.items()}
+        input_id = input_mapping.get(source)
 
+        if input_id is None:
+            _LOGGER.error(
+                "Invalid source selected: %s. Available sources: %s",
+                source,
+                self.coordinator.data.available_inputs,
+            )
+            return
 
-    def update(self):
-        """Fetch the latest state of the media player from the device."""
-        url = f"{self.base_url}/data/0/"
+        _LOGGER.info("Switching output %s to input %s (%s)", self._output_id, input_id, source)
+
         try:
-            response = requests.get(url)
-            if response.status_code == 200:
-                data = response.json()
-                self._state = STATE_ON if data['data']['power'] else STATE_OFF
-                _LOGGER.info(f"Device state updated: {'on' if self._state == STATE_ON else 'off'}")
-            else:
-                _LOGGER.error(f"Failed to update device state: {response.status_code}")
-        except Exception as e:
-            _LOGGER.error(f"Error updating device state: {e}")
+            await self.coordinator.async_switch_output(self._output_id, input_id)
+            _LOGGER.info("Successfully switched to source: %s", source)
+        except MHUBException as err:
+            _LOGGER.error("Failed to switch source: %s", err)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator.
+
+        This is called automatically when coordinator data changes.
+        """
+        _LOGGER.debug("Received coordinator update for %s", self._attr_name)
+        self.async_write_ha_state()
